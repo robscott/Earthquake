@@ -57,39 +57,26 @@ public class Earthquake extends Activity {
     super.onActivityResult(requestCode, resultCode, data);
     
     if (requestCode == SHOW_PREFERENCES) {
-      if (resultCode == Activity.RESULT_OK) {
-        updateFromPreferences();
-        FragmentManager fm = getFragmentManager();
-        final EarthquakeListFragment earthquakeList = 
-          (EarthquakeListFragment)fm.findFragmentById(R.id.EarthquakeListFragment);
-        Thread t = new Thread(new Runnable() {
-          public void run() {
-            earthquakeList.refreshEarthquakes();
-          }
-        });
-        t.start();
-      }
+      updateFromPreferences();
+      FragmentManager fm = getFragmentManager();
+      final EarthquakeListFragment earthquakeList = 
+        (EarthquakeListFragment)fm.findFragmentById(R.id.EarthquakeListFragment);
+      Thread t = new Thread(new Runnable() {
+        public void run() {
+          earthquakeList.refreshEarthquakes();
+        }
+      });
+      t.start();
     }
   }
   
   private void updateFromPreferences() {
     Context context = getApplicationContext();
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    
-    int minMagIndex = prefs.getInt(PreferencesActivity.PREF_MIN_MAG_INDEX, 0);
-    if (minMagIndex < 0) minMagIndex = 0;
-    
-    int freqIndex = prefs.getInt(PreferencesActivity.PREF_UPDATE_FREQ_INDEX, 0);
-    if (freqIndex < 0) freqIndex = 0;
-    
-    autoUpdateChecked = prefs.getBoolean(PreferencesActivity.PREF_AUTO_UPDATE, false);
-    
-    Resources r = getResources();
-    
-    String[] minMagValues = r.getStringArray(R.array.magnitude);
-    String[] freqValues = r.getStringArray(R.array.update_freq_values);
-    
-    minimumMagnitude = Integer.valueOf(minMagValues[minMagIndex]);
-    updateFreq = Integer.valueOf(freqValues[freqIndex]);
+
+    minimumMagnitude = Integer.parseInt(prefs.getString(PreferencesActivity.PREF_MIN_MAG, "3"));
+    updateFreq = Integer.parseInt(prefs.getString(PreferencesActivity.PREF_UPDATE_FREQ, "60"));
+
+    autoUpdateChecked = prefs.getBoolean(PreferencesActivity.PREF_AUTO_UPDATE, false);    
   }
 }
