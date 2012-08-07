@@ -5,7 +5,7 @@ import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Resources;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.Menu;
@@ -44,7 +44,10 @@ public class Earthquake extends Activity {
     super.onOptionsItemSelected(item);
     switch (item.getItemId()) {
       case (MENU_PREFERENCES): {
-        Intent i = new Intent(this, PreferencesActivity.class);
+        Class c = Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB ? 
+          PreferencesActivity.class : FragmentPreferences.class;
+        
+        Intent i = new Intent(this, c);
         startActivityForResult(i, SHOW_PREFERENCES);
         return true;
       }
