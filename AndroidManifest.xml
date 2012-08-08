@@ -29,7 +29,9 @@
         <activity
             android:name=".FragmentPreferences"
             android:label="@string/title_activity_preferences" >
-        </activity>    
+        </activity>
+        <provider android:name=".EarthquakeProvider"
+                  android:authorities="com.robertjscott.earthquakeprovider"/>
     </application>
 
 </manifest>
