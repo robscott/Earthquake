@@ -34,7 +34,7 @@ public class EarthquakeSearchResults extends ListActivity implements LoaderManag
     }
     
     String[] projection = { EarthquakeProvider.KEY_ID, EarthquakeProvider.KEY_SUMMARY };
-    String where = EarthquakeProvider.KEY_SUMMARY+" LIKE \"%"+query + "%\"";
+    String where = EarthquakeProvider.KEY_SUMMARY+" LIKE \"%"+query+"%\"";
     String[] whereArgs = null;
     String sortOrder = EarthquakeProvider.KEY_SUMMARY+ " COLLATE LOCALIZED ASC";
     
