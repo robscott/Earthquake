@@ -1,7 +1,10 @@
 package com.robertjscott.earthquake;
 
+import android.app.ActionBar;
+import android.app.ActionBar.Tab;
 import android.app.Activity;
-import android.app.FragmentManager;
+import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.app.SearchManager;
 import android.app.SearchableInfo;
 import android.content.Context;
@@ -12,6 +15,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.SearchView;
 
 public class Earthquake extends Activity {
@@ -25,6 +29,42 @@ public class Earthquake extends Activity {
   public boolean autoUpdateChecked = false;
   public int updateFreq = 0;
 
+  public static class TabListener<T extends Fragment> implements ActionBar.TabListener {
+    
+    private Fragment fragment;
+    private Activity activity;
+    private Class<T> fragmentClass;
+    
+    private int fragmentContainer;
+    
+    public TabListener(Activity activity, int fragmentContainer, Class<T> fragmentClass) {
+      this.activity = activity;
+      this.fragmentContainer = fragmentContainer;
+      this.fragmentClass = fragmentClass;
+    }
+    
+    public void onTabSelected(Tab tab, FragmentTransaction ft) {
+      if (fragment == null) {
+        String fragmentName = fragmentClass.getName();
+        fragment = Fragment.instantiate(activity, fragmentName);
+        ft.add(fragmentContainer, fragment, fragmentName);
+      } else {
+        ft.attach(fragment);
+      }
+    }
+
+    public void onTabUnselected(Tab tab, FragmentTransaction ft) {
+      if (fragment != null) ft.detach(fragment);
+    }
+
+    
+    public void onTabReselected(Tab tab, FragmentTransaction ft) {
+      if (fragment != null) ft.attach(fragment);
+    }
+  }
+  
+  TabListener<EarthquakeListFragment> listTabListener;
+  TabListener<EarthquakeMapFragment> mapTabListener;
   
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -38,7 +78,94 @@ public class Earthquake extends Activity {
     
     SearchView searchView = (SearchView)findViewById(R.id.searchView);
     searchView.setSearchableInfo(searchableInfo);
+    
+    ActionBar actionBar = getActionBar();
+    
+    View fragmentContainer = findViewById(R.id.EarthquakeFragmentContainer);
+    
+    boolean tabletLayout = (fragmentContainer == null);
+    
+    if (!tabletLayout) {
+      actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+      actionBar.setDisplayShowTitleEnabled(false);
+      
+      Tab listTab = actionBar.newTab();
+      listTabListener = new TabListener<EarthquakeListFragment>
+        (this, R.id.EarthquakeFragmentContainer, EarthquakeListFragment.class);
+      
+      listTab.setText("List")
+             .setContentDescription("List of earthquakes")
+             .setTabListener(listTabListener);
+
+      actionBar.addTab(listTab);
+      
+      Tab mapTab = actionBar.newTab();
+      mapTabListener = new TabListener<EarthquakeMapFragment>
+        (this, R.id.EarthquakeFragmentContainer, EarthquakeMapFragment.class);
+      
+      mapTab.setText("Map")
+            .setContentDescription("Map of earthquakes")
+            .setTabListener(mapTabListener);
+      
+      actionBar.addTab(mapTab);
+    }
   }
+  
+  private static String ACTION_BAR_INDEX = "ACTION_BAR_INDEX";
+  
+  @Override
+  public void onSaveInstanceState(Bundle outState) {
+    View fragmentContainer = findViewById(R.id.EarthquakeFragmentContainer);
+    boolean tabletLayout = (fragmentContainer == null);
+    
+    if (!tabletLayout) {
+      int actionBarIndex = getActionBar().getSelectedTab().getPosition();
+      SharedPreferences.Editor editor = getPreferences(Activity.MODE_PRIVATE).edit();
+      editor.putInt(ACTION_BAR_INDEX, actionBarIndex);
+      editor.apply();
+      
+      FragmentTransaction ft = getFragmentManager().beginTransaction();
+      if (mapTabListener.fragment != null) ft.detach(mapTabListener.fragment);
+      if (listTabListener.fragment != null) ft.detach(listTabListener.fragment);
+      ft.commit();
+    }
+    
+    super.onSaveInstanceState(outState);
+  }
+  
+  @Override
+  public void onRestoreInstanceState(Bundle outState) {
+    super.onRestoreInstanceState(outState);
+
+    View fragmentContainer = findViewById(R.id.EarthquakeFragmentContainer);
+    boolean tabletLayout = (fragmentContainer == null);
+    
+    if (!tabletLayout) {
+      listTabListener.fragment = getFragmentManager().findFragmentByTag(EarthquakeListFragment.class.getName());
+      mapTabListener.fragment = getFragmentManager().findFragmentByTag(EarthquakeMapFragment.class.getName());
+      
+      SharedPreferences sp = getPreferences(Activity.MODE_PRIVATE);
+      int actionBarIndex = sp.getInt(ACTION_BAR_INDEX, 0);
+      getActionBar().setSelectedNavigationItem(actionBarIndex);
+    }
+  }
+
+
+  @Override
+  public void onResume() {
+    super.onResume();
+
+    View fragmentContainer = findViewById(R.id.EarthquakeFragmentContainer);
+    boolean tabletLayout = (fragmentContainer == null);
+    
+    if (!tabletLayout) {
+      SharedPreferences sp = getPreferences(Activity.MODE_PRIVATE);
+      int actionBarIndex = sp.getInt(ACTION_BAR_INDEX, 0);
+      getActionBar().setSelectedNavigationItem(actionBarIndex);
+    }
+  }
+
+  
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
@@ -63,24 +190,17 @@ public class Earthquake extends Activity {
     }
     return false;
   }
-  
+
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
     
     if (requestCode == SHOW_PREFERENCES) {
       updateFromPreferences();
-      FragmentManager fm = getFragmentManager();
-      final EarthquakeListFragment earthquakeList = 
-        (EarthquakeListFragment)fm.findFragmentById(R.id.EarthquakeListFragment);
-      Thread t = new Thread(new Runnable() {
-        public void run() {
-          earthquakeList.refreshEarthquakes();
-        }
-      });
-      t.start();
+      startService(new Intent(this, EarthquakeUpdateService.class));
     }
   }
+  
   
   private void updateFromPreferences() {
     Context context = getApplicationContext();
