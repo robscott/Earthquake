@@ -47,5 +47,10 @@
     />
     </activity>
     <service android:enabled="true" android:name=".EarthquakeUpdateService"/>
+    <receiver android:name=".EarthquakeAlarmReceiver">
+      <intent-filter>
+        <action android:name="com.robertjscott.earthquake.ACTION_REFRESH_EARTHQUAKE_ALARM" />
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>
